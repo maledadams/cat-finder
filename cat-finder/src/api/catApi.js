@@ -1,13 +1,19 @@
-const CAT_API_BASE_URL = "https://api.thecatapi.com/v1";
-const CAT_API_KEY = import.meta.env.VITE_CAT_API_KEY;
+const CAT_PROXY_BASE_URL = "/.netlify/functions/cat-api";
 
 export async function fetchCatApi(endpoint) {
-  const response = await fetch(`${CAT_API_BASE_URL}${endpoint}`, {
-    headers: CAT_API_KEY ? { "x-api-key": CAT_API_KEY } : {},
-  });
+  const proxyUrl = `${CAT_PROXY_BASE_URL}?endpoint=${encodeURIComponent(endpoint)}`;
+  const response = await fetch(proxyUrl);
 
   if (!response.ok) {
-    throw new Error("The Cat API request failed.");
+    let message = "The Cat API request failed.";
+    try {
+      const errorBody = await response.json();
+      if (typeof errorBody?.error === "string" && errorBody.error) {
+        message = errorBody.error;
+      }
+    } catch {
+    }
+    throw new Error(message);
   }
 
   return response.json();
