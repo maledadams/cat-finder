@@ -1,0 +1,518 @@
+'use strict';
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var axios = require('axios');
+var NodeFormData = require('form-data');
+
+function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+
+var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
+var NodeFormData__default = /*#__PURE__*/_interopDefaultLegacy(NodeFormData);
+
+/**
+ *
+ *  Throws when no response was received from the server
+ *  @param message - error message
+ *
+ * */
+class ApiRequestError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+
+}
+
+/**
+ *
+ *  Throws when the server responds with a status code that falls out of the range 2xx
+ *  @param statusCode - HTTP status code the server responded with
+ *  @param data - Server response body
+ *
+ * */
+class ApiResponseError extends Error {
+  constructor(statusCode, data) {
+    super(`ApiResponseError (${statusCode})`);
+    this.statusCode = statusCode;
+    this.data = data;
+    this.name = "ApiResponseError";
+  }
+
+}
+
+const LIBRARY_VERSION = "1.0.2";
+
+class ApiRequest {
+  constructor(config) {
+    const {
+      host,
+      apiKey
+    } = config;
+    this.host = host;
+    this.apiKey = apiKey;
+    this.headers = this._generateDefaultHeaders();
+
+    this._init();
+  }
+
+  _init() {
+    const isoDateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d*)?(?:[-+]\d{2}:?\d{2}|Z)?$/;
+
+    function isIsoDateString(value) {
+      return value && typeof value === "string" && isoDateFormat.test(value);
+    }
+
+    function handleDates(body) {
+      if (body === null || body === undefined || typeof body !== "object") {
+        return body;
+      }
+
+      for (const key of Object.keys(body)) {
+        const value = body[key];
+
+        if (isIsoDateString(value)) {
+          body[key] = new Date(value);
+        } else if (typeof value === "object") {
+          handleDates(value);
+        }
+      }
+    }
+
+    axios__default["default"].interceptors.response.use(response => {
+      handleDates(response.data);
+      return response;
+    });
+  }
+
+  async request(method, endpoint, payload) {
+    try {
+      const response = await axios__default["default"].request({
+        baseURL: this.host,
+        method: method,
+        url: endpoint,
+        data: payload,
+        headers: this.headers
+      });
+      return response.data;
+    } catch (error) {
+      if (axios__default["default"].isAxiosError(error)) {
+        if (error.response) {
+          throw new ApiResponseError(error.response.status, error.response.data);
+        } else if (error.request) {
+          throw new ApiRequestError(error.message);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  _generateDefaultHeaders() {
+    return {
+      "user-agent": `thecatapi-client-node/${LIBRARY_VERSION}`,
+      "x-api-key": this.apiKey
+    };
+  }
+
+}
+
+var HttpMethod;
+
+(function (HttpMethod) {
+  HttpMethod["GET"] = "GET";
+  HttpMethod["POST"] = "POST";
+  HttpMethod["DELETE"] = "DELETE";
+  HttpMethod["PATCH"] = "PATCH";
+  HttpMethod["PUT"] = "PUT";
+})(HttpMethod || (HttpMethod = {}));
+
+const isNode = new Function("try {return this===global;}catch(e){return false;}");
+function createFormData(data) {
+  let formData;
+
+  if (isNode()) {
+    formData = new NodeFormData__default["default"]();
+  } else {
+    formData = new FormData();
+  }
+
+  Object.entries(data).forEach(([key, value]) => {
+    formData.append(key, value);
+  });
+  return formData;
+}
+
+function mapUploadedImage(response) {
+  return {
+    id: response.id,
+    width: response.width,
+    height: response.height,
+    url: response.url,
+    subId: response.sub_id,
+    originalFilename: response.original_filename,
+    pending: Boolean(response.pending),
+    approved: Boolean(response.approved)
+  };
+}
+function mapUserImage(response) {
+  var _a, _b;
+
+  return {
+    id: response.id,
+    originalFilename: response.original_filename,
+    url: response.url,
+    breeds: response.breeds,
+    breedId: (_a = response.breed_ids) !== null && _a !== void 0 ? _a : null,
+    categories: response.categories,
+    subId: (_b = response.sub_id) !== null && _b !== void 0 ? _b : null,
+    height: response.height,
+    width: response.width,
+    createdAt: response.created_at,
+    favourite: response.favourite,
+    vote: response.vote
+  };
+}
+function mapImageFilters(filter) {
+  return Object.entries(filter).map(([key, value]) => {
+    if (key === "hasBreeds") {
+      return ["has_breeds", value ? 1 : 0];
+    } else if (key === "breeds") {
+      return ["breed_ids", value.join(",")];
+    } else if (key === "categories") {
+      return ["category_ids", value.join(",")];
+    } else if (key === "mimeTypes") {
+      return ["mime_types", value.join(",")];
+    } else if (key === "subId") {
+      return ["sub_id", value];
+    } else if (key === "originalFilename") {
+      return ["original_filename", value];
+    }
+
+    return [key, value];
+  });
+}
+
+function _mapImageAnalysis(response) {
+  const labels = response.labels.map(label => {
+    var _a, _b;
+
+    return {
+      confidence: label.Confidence,
+      instances: (_a = label.Instances) === null || _a === void 0 ? void 0 : _a.map(instance => ({
+        boundingBox: {
+          height: instance.BoundingBox.Height,
+          left: instance.BoundingBox.Left,
+          top: instance.BoundingBox.Top,
+          width: instance.BoundingBox.Width
+        },
+        confidence: instance.Confidence
+      })),
+      name: label.Name,
+      parents: (_b = label.Parents) === null || _b === void 0 ? void 0 : _b.map(parent => ({
+        name: parent.Name
+      }))
+    };
+  });
+  return {
+    labels,
+    moderationLabels: response.moderation_labels,
+    vendor: response.vendor,
+    imageId: response.image_id,
+    createdAt: response.created_at
+  };
+}
+
+function mapImageAnalysis(response) {
+  return response.map(_mapImageAnalysis);
+}
+
+function buildQueryParams(filter, mapper) {
+  let _filters = Object.entries(filter);
+
+  if (mapper) {
+    _filters = mapper(filter);
+  }
+
+  if (_filters.length === 0) {
+    return "";
+  }
+
+  const filters = _filters.map(([key, value]) => `${key}=${value}`);
+
+  return `?${filters.join("&")}`;
+}
+
+class Images {
+  constructor(apiService) {
+    this.api = apiService;
+    this.endpoint = "/images";
+  }
+
+  async searchImages(filter) {
+    const queryParams = filter ? buildQueryParams(filter, mapImageFilters) : "";
+    return await this.api.request(HttpMethod.GET, `${this.endpoint}/search${queryParams}`);
+  }
+
+  async getImage(id, options) {
+    const queryParams = options ? buildQueryParams(options, mapImageFilters) : "";
+    return await this.api.request(HttpMethod.GET, `${this.endpoint}/${id}${queryParams}`);
+  }
+
+  async getImages(filter) {
+    const queryParams = filter ? buildQueryParams(filter, mapImageFilters) : "";
+    const images = await this.api.request(HttpMethod.GET, `${this.endpoint}${queryParams}`);
+    return images.map(mapUserImage);
+  }
+
+  async getRandomImage(filter) {
+    const images = await this.searchImages(filter);
+
+    if (images.length > 0) {
+      return images[0];
+    }
+
+    return null;
+  }
+
+  async getImageAnalysis(id) {
+    const analysis = await this.api.request(HttpMethod.GET, `${this.endpoint}/${id}/analysis`);
+    return mapImageAnalysis(analysis);
+  }
+
+  async uploadImage(image, subId) {
+    const data = subId ? {
+      file: image,
+      sub_id: subId
+    } : {
+      file: image
+    };
+    const formData = createFormData(data);
+    const uploadedImage = await this.api.request(HttpMethod.POST, `${this.endpoint}/upload`, formData);
+    return mapUploadedImage(uploadedImage);
+  }
+
+  async deleteImage(id) {
+    await this.api.request(HttpMethod.DELETE, `${this.endpoint}/${id}`);
+  }
+
+}
+
+function mapFavourite(response) {
+  return {
+    id: response.id,
+    userId: response.user_id,
+    subId: response.sub_id,
+    imageId: response.image_id,
+    image: {
+      id: response.image.id,
+      url: response.image.url
+    },
+    createdAt: response.created_at
+  };
+}
+
+class Favourites {
+  constructor(apiService) {
+    this.api = apiService;
+    this.endpoint = "/favourites";
+  }
+
+  async getFavourites(subId) {
+    const queryParams = subId ? buildQueryParams({
+      subId
+    }, mapImageFilters) : "";
+    const favourites = await this.api.request(HttpMethod.GET, `${this.endpoint}${queryParams}`);
+    return favourites.map(mapFavourite);
+  }
+
+  async getFavourite(id) {
+    const favourite = await this.api.request(HttpMethod.GET, `${this.endpoint}/${id}`);
+    return mapFavourite(favourite);
+  }
+
+  async addFavourite(imageId, subId) {
+    const data = {
+      image_id: imageId,
+      sub_id: subId
+    };
+    return await this.api.request(HttpMethod.POST, this.endpoint, data);
+  }
+
+  async deleteFavourite(id) {
+    return await this.api.request(HttpMethod.DELETE, `${this.endpoint}/${id}`);
+  }
+
+}
+
+function mapVotes(response) {
+  return {
+    id: response.id,
+    subId: response.sub_id,
+    value: response.value,
+    imageId: response.image_id,
+    countryCode: response.country_code,
+    createdAt: response.created_at,
+    image: response.image
+  };
+}
+function mapVote(response) {
+  return Object.assign(Object.assign({}, mapVotes(response)), {
+    userId: response.user_id
+  });
+}
+function mapAddVoteData(data) {
+  return {
+    image_id: data.imageId,
+    sub_id: data.subId,
+    value: data.value
+  };
+}
+function mapAddedVote(response) {
+  return {
+    id: response.id,
+    subId: response.sub_id,
+    imageId: response.image_id,
+    value: response.value,
+    countryCode: response.country_code,
+    message: response.message
+  };
+}
+
+class Votes {
+  constructor(apiService) {
+    this.api = apiService;
+    this.endpoint = "/votes";
+  }
+
+  async getVotes(subId) {
+    const queryParams = subId ? buildQueryParams({
+      subId
+    }, mapImageFilters) : "";
+    const votes = await this.api.request(HttpMethod.GET, `${this.endpoint}${queryParams}`);
+    return votes.map(mapVotes);
+  }
+
+  async getVote(id) {
+    const vote = await this.api.request(HttpMethod.GET, `${this.endpoint}/${id}`);
+    return mapVote(vote);
+  }
+
+  async addVote(data) {
+    const mappedData = mapAddVoteData(data);
+    const addedVote = await this.api.request(HttpMethod.POST, this.endpoint, mappedData);
+    return mapAddedVote(addedVote);
+  }
+
+  async deleteVote(id) {
+    return await this.api.request(HttpMethod.DELETE, `${this.endpoint}/${id}`);
+  }
+
+}
+
+const HOST = "https://api.thecatapi.com/v1";
+
+class Thecatapi {
+  constructor(apiKey, options) {
+    var _a;
+
+    this.apiKey = apiKey;
+    this.host = (_a = options === null || options === void 0 ? void 0 : options.host) !== null && _a !== void 0 ? _a : HOST;
+    const api = new ApiRequest({
+      apiKey: apiKey,
+      host: this.host
+    });
+    this.images = new Images(api);
+    this.favourites = new Favourites(api);
+    this.votes = new Votes(api);
+  }
+
+}
+
+exports.Breed = void 0;
+
+(function (Breed) {
+  Breed["ABYSSINIAN"] = "abys";
+  Breed["AEGEAN"] = "aege";
+  Breed["AMERICAN_BOBTAIL"] = "abob";
+  Breed["AMERICAN_CURL"] = "acur";
+  Breed["AMERICAN_SHORTHAIR"] = "asho";
+  Breed["AMERICAN_WIREHAIR"] = "awir";
+  Breed["ARABIAN_MAU"] = "amau";
+  Breed["AUSTRALIAN_MIST"] = "amis";
+  Breed["BALINESE"] = "bali";
+  Breed["BAMBINO"] = "bamb";
+  Breed["BENGAL"] = "beng";
+  Breed["BIRMAN"] = "birm";
+  Breed["BOMBAY"] = "bomb";
+  Breed["BRITISH_LONGHAIR"] = "bslo";
+  Breed["BRITISH_SHORTHAIR"] = "bsho";
+  Breed["BURMESE"] = "bure";
+  Breed["BURMILLA"] = "buri";
+  Breed["CALIFORNIA_SPANGLED"] = "cspa";
+  Breed["CHANTILLY_TIFFANY"] = "ctif";
+  Breed["CHARTREUX"] = "char";
+  Breed["CHAUSIE"] = "chau";
+  Breed["CHEETOH"] = "chee";
+  Breed["COLORPOINT_SHORTHAIR"] = "csho";
+  Breed["CORNISH_REX"] = "crex";
+  Breed["CYMRIC"] = "cymr";
+  Breed["CYPRUS"] = "cypr";
+  Breed["DEVON_REX"] = "drex";
+  Breed["DONSKOY"] = "dons";
+  Breed["DRAGON_LI"] = "lihu";
+  Breed["EGYPTIAN_MAU"] = "emau";
+  Breed["EUROPEAN_BURMESE"] = "ebur";
+  Breed["EXOTIC_SHORTHAIR"] = "esho";
+  Breed["HAVANA_BROWN"] = "hbro";
+  Breed["HIMALAYAN"] = "hima";
+  Breed["JAPANESE_BOBTAIL"] = "jbob";
+  Breed["JAVANESE"] = "java";
+  Breed["KHAO_MANEE"] = "khao";
+  Breed["KORAT"] = "kora";
+  Breed["KURILIAN"] = "kuri";
+  Breed["LAPERM"] = "lape";
+  Breed["MAINE_COON"] = "mcoo";
+  Breed["MALAYAN"] = "mala";
+  Breed["MANX"] = "manx";
+  Breed["MUNCHKIN"] = "munc";
+  Breed["NEBELUNG"] = "nebe";
+  Breed["NORWEGIAN_FOREST_CAT"] = "norw";
+  Breed["OCICAT"] = "ocic";
+  Breed["ORIENTAL"] = "orie";
+  Breed["PERSIAN"] = "pers";
+  Breed["PIXIE_BOB"] = "pixi";
+  Breed["RAGAMUFFIN"] = "raga";
+  Breed["RAGDOLL"] = "ragd";
+  Breed["RUSSIAN_BLUE"] = "rblu";
+  Breed["SAVANNAH"] = "sava";
+  Breed["SCOTTISH_FOLD"] = "sfol";
+  Breed["SELKIRK_REX"] = "srex";
+  Breed["SIAMESE"] = "siam";
+  Breed["SIBERIAN"] = "sibe";
+  Breed["SINGAPURA"] = "sing";
+  Breed["SNOWSHOE"] = "snow";
+  Breed["SOMALI"] = "soma";
+  Breed["SPHYNX"] = "sphy";
+  Breed["TONKINESE"] = "tonk";
+  Breed["TOYGER"] = "toyg";
+  Breed["TURKISH_ANGORA"] = "tang";
+  Breed["TURKISH_VAN"] = "tvan";
+  Breed["YORK_CHOCOLATE"] = "ycho";
+})(exports.Breed || (exports.Breed = {}));
+
+exports.Category = void 0;
+
+(function (Category) {
+  Category[Category["HATS"] = 1] = "HATS";
+  Category[Category["SPACE"] = 2] = "SPACE";
+  Category[Category["SUNGLASSES"] = 4] = "SUNGLASSES";
+  Category[Category["BOXES"] = 5] = "BOXES";
+  Category[Category["TIES"] = 7] = "TIES";
+  Category[Category["SINKS"] = 14] = "SINKS";
+  Category[Category["CLOTHES"] = 15] = "CLOTHES";
+})(exports.Category || (exports.Category = {}));
+
+exports.ApiRequestError = ApiRequestError;
+exports.ApiResponseError = ApiResponseError;
+exports.TheCatAPI = Thecatapi;

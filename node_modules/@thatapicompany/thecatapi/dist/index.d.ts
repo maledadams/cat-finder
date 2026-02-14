@@ -1,0 +1,394 @@
+/// <reference types="node" />
+import * as stream from 'stream';
+
+declare enum Breed {
+    ABYSSINIAN = "abys",
+    AEGEAN = "aege",
+    AMERICAN_BOBTAIL = "abob",
+    AMERICAN_CURL = "acur",
+    AMERICAN_SHORTHAIR = "asho",
+    AMERICAN_WIREHAIR = "awir",
+    ARABIAN_MAU = "amau",
+    AUSTRALIAN_MIST = "amis",
+    BALINESE = "bali",
+    BAMBINO = "bamb",
+    BENGAL = "beng",
+    BIRMAN = "birm",
+    BOMBAY = "bomb",
+    BRITISH_LONGHAIR = "bslo",
+    BRITISH_SHORTHAIR = "bsho",
+    BURMESE = "bure",
+    BURMILLA = "buri",
+    CALIFORNIA_SPANGLED = "cspa",
+    CHANTILLY_TIFFANY = "ctif",
+    CHARTREUX = "char",
+    CHAUSIE = "chau",
+    CHEETOH = "chee",
+    COLORPOINT_SHORTHAIR = "csho",
+    CORNISH_REX = "crex",
+    CYMRIC = "cymr",
+    CYPRUS = "cypr",
+    DEVON_REX = "drex",
+    DONSKOY = "dons",
+    DRAGON_LI = "lihu",
+    EGYPTIAN_MAU = "emau",
+    EUROPEAN_BURMESE = "ebur",
+    EXOTIC_SHORTHAIR = "esho",
+    HAVANA_BROWN = "hbro",
+    HIMALAYAN = "hima",
+    JAPANESE_BOBTAIL = "jbob",
+    JAVANESE = "java",
+    KHAO_MANEE = "khao",
+    KORAT = "kora",
+    KURILIAN = "kuri",
+    LAPERM = "lape",
+    MAINE_COON = "mcoo",
+    MALAYAN = "mala",
+    MANX = "manx",
+    MUNCHKIN = "munc",
+    NEBELUNG = "nebe",
+    NORWEGIAN_FOREST_CAT = "norw",
+    OCICAT = "ocic",
+    ORIENTAL = "orie",
+    PERSIAN = "pers",
+    PIXIE_BOB = "pixi",
+    RAGAMUFFIN = "raga",
+    RAGDOLL = "ragd",
+    RUSSIAN_BLUE = "rblu",
+    SAVANNAH = "sava",
+    SCOTTISH_FOLD = "sfol",
+    SELKIRK_REX = "srex",
+    SIAMESE = "siam",
+    SIBERIAN = "sibe",
+    SINGAPURA = "sing",
+    SNOWSHOE = "snow",
+    SOMALI = "soma",
+    SPHYNX = "sphy",
+    TONKINESE = "tonk",
+    TOYGER = "toyg",
+    TURKISH_ANGORA = "tang",
+    TURKISH_VAN = "tvan",
+    YORK_CHOCOLATE = "ycho"
+}
+
+declare enum Category {
+    HATS = 1,
+    SPACE = 2,
+    SUNGLASSES = 4,
+    BOXES = 5,
+    TIES = 7,
+    SINKS = 14,
+    CLOTHES = 15
+}
+
+declare type BaseImage = {
+    id: string;
+    width: number;
+    height: number;
+    url: string;
+};
+declare type ImageSize = "small" | "med" | "full";
+declare type Image = BaseImage & {
+    breeds?: Record<string, any>[];
+    categories?: Record<string, any>[];
+};
+declare type GetImageOptions = {
+    subId?: string;
+    size?: ImageSize;
+};
+declare type GetImage = Image & {
+    vote?: ImageVote;
+    favourite?: ImageFavourite;
+};
+declare type SearchImagesFilter = {
+    limit?: number;
+    page?: number;
+    order?: "ASC" | "DESC" | "RAND";
+    hasBreeds?: boolean;
+    breeds?: Breed[];
+    categories?: Category[];
+    mimeTypes?: ("jpg" | "png" | "gif")[];
+    size?: ImageSize;
+};
+declare type GetRandomImageFilter = Omit<SearchImagesFilter, "limit" | "page" | "order">;
+declare type UploadedImage = BaseImage & {
+    subId?: string;
+    originalFilename: string;
+    pending: boolean;
+    approved: boolean;
+};
+declare type GetImagesFilter = SearchImagesFilter & {
+    subId?: string;
+    originalFilename?: string;
+};
+declare type ImageVote = {
+    id: number;
+    value: number;
+};
+declare type ImageFavourite = {
+    id: number;
+};
+declare type UserImage = Omit<Image, "breeds"> & {
+    breeds: Record<string, any>[];
+    breedId: string | null;
+    originalFilename: string;
+    subId: string | null;
+    createdAt: Date;
+    vote?: ImageVote;
+    favourite?: ImageFavourite;
+};
+declare type ImageAnalysisLabel = {
+    confidence: number;
+    instances?: {
+        boundingBox: {
+            height: number;
+            left: number;
+            top: number;
+            width: number;
+        };
+        confidence: number;
+    }[];
+    name: string;
+    parents?: {
+        name: string;
+    }[];
+};
+declare type ImageAnalysis = {
+    labels: ImageAnalysisLabel[];
+    moderationLabels: any;
+    vendor: string;
+    imageId: string;
+    createdAt: Date;
+};
+
+interface ImagesInterface {
+    /**
+     * Searches all approved images
+     *
+     * @param [filter] - optional filter
+     * @param [filter.size] - size of the images
+     * @param [filter.mime_types] - format of the images
+     * @param [filter.order] - order of the images
+     * @param [filter.page] - used for paginating through all the results. Only used when order is ASC or DESC
+     * @param [filter.limit] - number of images to be returned
+     * @param [filter.categories] - list of unique category ids that represent a category
+     * @param [filter.breeds] - breed enums
+     * @param [filter.hasBreeds] - only return images which have breed data attached
+     * @returns list of images matching the filter criteria
+     */
+    searchImages(filter?: SearchImagesFilter): Promise<Image[]>;
+    /**
+     * Returns an individual image
+     *
+     * @param id - id of the image
+     * @param options - optional filter
+     * @param [options.subId] - specify this to save this request the account stats
+     * @param [options.size] - size of the image
+     * @returns image with the given id
+     */
+    getImage(id: string, options?: GetImageOptions): Promise<GetImage>;
+    /**
+     * Returns the images uploaded to this account
+     *
+     * @param [filter] - optional filter
+     * @param [filter.size] - size of the images
+     * @param [filter.mime_types] - format of the images
+     * @param [filter.order] - order of the images
+     * @param [filter.page] - used for paginating through all the results. Only used when order is ASC or DESC
+     * @param [filter.limit] - number of images to be returned
+     * @param [filter.categories] - list of unique category ids that represent a category
+     * @param [filter.breeds] - breed enums
+     * @param [filter.hasBreeds] - only return images which have breed data attached
+     * @param [filter.subId] - custom id (provided when uploading the image)
+     * @param [filter.originalFilename] - original file name of the uploaded image
+     * @returns images uploaded to this account
+     */
+    getImages(filter?: GetImagesFilter): Promise<UserImage[]>;
+    /**
+     * Returns a random image
+     *
+     * @param [filter] - optional filter
+     * @param [filter.size] - size of the image
+     * @param [filter.mime_types] - format of the image
+     * @param [filter.categories] - list of unique category ids that represent a category
+     * @param [filter.breeds] - breed enums
+     * @param [filter.hasBreeds] - only return an image with breed data attached
+     * @returns image matching the filter criteria, null if no image exists that matches the filter
+     */
+    getRandomImage(filter?: GetRandomImageFilter): Promise<Image | null>;
+    /**
+     * Returns the analysis of an images
+     *
+     * @param id - id of the image
+     * @returns image analysis containing an array of labels detected in the image and the level of confidence by which they were detected
+     */
+    getImageAnalysis(id: string): Promise<ImageAnalysis[]>;
+    /**
+     * Uploads a cat/dog image
+     *
+     * @param image - Node stream or a blob of the image to be uploaded
+     * @param [subId] - custom id
+     * @returns uploaded image data
+     */
+    uploadImage(image: File | stream.Readable, subId?: string): Promise<UploadedImage>;
+    /**
+     * Deletes an image
+     *
+     * @param id - id of the image
+     */
+    deleteImage(id: string): Promise<void>;
+}
+
+declare type Favourite = {
+    id: number;
+    userId: string;
+    imageId: string;
+    subId: string | null;
+    createdAt: Date;
+    image: {
+        id: string;
+        url: string;
+    };
+};
+declare type AddFavourite = {
+    id: number;
+    message: string;
+};
+declare type DeleteFavourite = {
+    message: string;
+};
+
+interface FavouritesInterface {
+    /**
+     * Returns favourites
+     *
+     * @param [subId] - specify this to filter favourites by subId
+     * @returns list of favourites of this account (filtered by subId if specified)
+     */
+    getFavourites(subId?: string): Promise<Favourite[]>;
+    /**
+     * Returns a favourite
+     *
+     * @param id - id of the favourite
+     * @returns favourite with the given id
+     */
+    getFavourite(id: number): Promise<Favourite>;
+    /**
+     * Adds an image to the favourites of this account
+     *
+     * @param imageId - id of the image to favourite
+     * @param [subId] - custom value used to filter the favourites (usually a user id)
+     * @returns created favourite data
+     */
+    addFavourite(imageId: string, subId?: string): Promise<AddFavourite>;
+    /**
+     * Deletes a favourite
+     *
+     * @param id - id of the favourite to be deleted
+     * @returns delete favourite response message
+     */
+    deleteFavourite(id: number): Promise<DeleteFavourite>;
+}
+
+declare type VoteImage = {
+    url?: string;
+    id?: string;
+};
+declare type Vote = {
+    id: number;
+    imageId: string;
+    subId: string | null;
+    value: number;
+    countryCode: string;
+    createdAt: Date;
+    image: VoteImage;
+};
+declare type GetVote = Vote & {
+    userId: string;
+};
+declare type AddVoteData = {
+    imageId: string;
+    subId?: string;
+    value: number;
+};
+declare type AddVote = Omit<Vote, "createdAt" | "image" | "subId"> & {
+    subId?: string;
+    message: string;
+};
+declare type DeleteVote = {
+    message: string;
+};
+
+interface VotesInterface {
+    /**
+     * Returns votes
+     *
+     * @param [subId] - specify this to filter votes by subId
+     * @returns list of votes of this account (filtered by subId if specified)
+     */
+    getVotes(subId?: string): Promise<Vote[]>;
+    /**
+     * Returns a vote
+     *
+     * @param id - id of the vote
+     * @returns vote with the given id
+     */
+    getVote(id: number): Promise<GetVote>;
+    /**
+     * Votes an image up or down
+     *
+     * @param data - data of the vote
+     * @param data.imagesId - id of the image to be voted
+     * @param data.value - vote value
+     * @param [data.subId] - custom value used to filter votes (usually a user id)
+     * @returns created vote data
+     */
+    addVote(data: AddVoteData): Promise<AddVote>;
+    /**
+     * Deletes a vote
+     *
+     * @param id - id of the vote to be deleted
+     * @returns delete vote response message
+     */
+    deleteVote(id: number): Promise<DeleteVote>;
+}
+
+declare type Options = {
+    host?: string;
+};
+declare class Thecatapi {
+    private readonly apiKey;
+    private readonly host;
+    images: ImagesInterface;
+    favourites: FavouritesInterface;
+    votes: VotesInterface;
+    constructor(apiKey: string, options?: Options);
+}
+//# sourceMappingURL=thecatapi.d.ts.map
+
+/**
+ *
+ *  Throws when no response was received from the server
+ *  @param message - error message
+ *
+ * */
+declare class ApiRequestError extends Error {
+    constructor(message: string);
+}
+//# sourceMappingURL=ApiRequestError.d.ts.map
+
+/**
+ *
+ *  Throws when the server responds with a status code that falls out of the range 2xx
+ *  @param statusCode - HTTP status code the server responded with
+ *  @param data - Server response body
+ *
+ * */
+declare class ApiResponseError extends Error {
+    statusCode: number;
+    data: any;
+    constructor(statusCode: number, data: any);
+}
+//# sourceMappingURL=ApiResponseError.d.ts.map
+
+export { ApiRequestError, ApiResponseError, Breed, Category, Thecatapi as TheCatAPI };

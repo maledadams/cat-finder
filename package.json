@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix cat-finder run dev",
+    "build": "npm --prefix cat-finder run build",
+    "preview": "npm --prefix cat-finder run preview",
+    "lint": "npm --prefix cat-finder run lint"
+  },
+  "dependencies": {
+    "@thatapicompany/thecatapi": "^1.0.2",
+    "react-icons": "^5.5.0"
+  }
+}

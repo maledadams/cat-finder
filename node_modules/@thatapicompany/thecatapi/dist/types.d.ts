@@ -1,0 +1,282 @@
+declare type FavouriteResponse = {
+    id: number;
+    user_id: string;
+    image_id: string;
+    sub_id: string | null;
+    created_at: Date;
+    image: {
+        id: string;
+        url: string;
+    };
+};
+declare type Favourite = {
+    id: number;
+    userId: string;
+    imageId: string;
+    subId: string | null;
+    createdAt: Date;
+    image: {
+        id: string;
+        url: string;
+    };
+};
+declare type AddFavourite = {
+    id: number;
+    message: string;
+};
+declare type DeleteFavourite = {
+    message: string;
+};
+
+declare enum Breed {
+    ABYSSINIAN = "abys",
+    AEGEAN = "aege",
+    AMERICAN_BOBTAIL = "abob",
+    AMERICAN_CURL = "acur",
+    AMERICAN_SHORTHAIR = "asho",
+    AMERICAN_WIREHAIR = "awir",
+    ARABIAN_MAU = "amau",
+    AUSTRALIAN_MIST = "amis",
+    BALINESE = "bali",
+    BAMBINO = "bamb",
+    BENGAL = "beng",
+    BIRMAN = "birm",
+    BOMBAY = "bomb",
+    BRITISH_LONGHAIR = "bslo",
+    BRITISH_SHORTHAIR = "bsho",
+    BURMESE = "bure",
+    BURMILLA = "buri",
+    CALIFORNIA_SPANGLED = "cspa",
+    CHANTILLY_TIFFANY = "ctif",
+    CHARTREUX = "char",
+    CHAUSIE = "chau",
+    CHEETOH = "chee",
+    COLORPOINT_SHORTHAIR = "csho",
+    CORNISH_REX = "crex",
+    CYMRIC = "cymr",
+    CYPRUS = "cypr",
+    DEVON_REX = "drex",
+    DONSKOY = "dons",
+    DRAGON_LI = "lihu",
+    EGYPTIAN_MAU = "emau",
+    EUROPEAN_BURMESE = "ebur",
+    EXOTIC_SHORTHAIR = "esho",
+    HAVANA_BROWN = "hbro",
+    HIMALAYAN = "hima",
+    JAPANESE_BOBTAIL = "jbob",
+    JAVANESE = "java",
+    KHAO_MANEE = "khao",
+    KORAT = "kora",
+    KURILIAN = "kuri",
+    LAPERM = "lape",
+    MAINE_COON = "mcoo",
+    MALAYAN = "mala",
+    MANX = "manx",
+    MUNCHKIN = "munc",
+    NEBELUNG = "nebe",
+    NORWEGIAN_FOREST_CAT = "norw",
+    OCICAT = "ocic",
+    ORIENTAL = "orie",
+    PERSIAN = "pers",
+    PIXIE_BOB = "pixi",
+    RAGAMUFFIN = "raga",
+    RAGDOLL = "ragd",
+    RUSSIAN_BLUE = "rblu",
+    SAVANNAH = "sava",
+    SCOTTISH_FOLD = "sfol",
+    SELKIRK_REX = "srex",
+    SIAMESE = "siam",
+    SIBERIAN = "sibe",
+    SINGAPURA = "sing",
+    SNOWSHOE = "snow",
+    SOMALI = "soma",
+    SPHYNX = "sphy",
+    TONKINESE = "tonk",
+    TOYGER = "toyg",
+    TURKISH_ANGORA = "tang",
+    TURKISH_VAN = "tvan",
+    YORK_CHOCOLATE = "ycho"
+}
+
+declare enum Category {
+    HATS = 1,
+    SPACE = 2,
+    SUNGLASSES = 4,
+    BOXES = 5,
+    TIES = 7,
+    SINKS = 14,
+    CLOTHES = 15
+}
+
+declare type BaseImage = {
+    id: string;
+    width: number;
+    height: number;
+    url: string;
+};
+declare type ImageSize = "small" | "med" | "full";
+declare type Image = BaseImage & {
+    breeds?: Record<string, any>[];
+    categories?: Record<string, any>[];
+};
+declare type GetImageOptions = {
+    subId?: string;
+    size?: ImageSize;
+};
+declare type GetImage = Image & {
+    vote?: ImageVote;
+    favourite?: ImageFavourite;
+};
+declare type SearchImagesFilter = {
+    limit?: number;
+    page?: number;
+    order?: "ASC" | "DESC" | "RAND";
+    hasBreeds?: boolean;
+    breeds?: Breed[];
+    categories?: Category[];
+    mimeTypes?: ("jpg" | "png" | "gif")[];
+    size?: ImageSize;
+};
+declare type GetRandomImageFilter = Omit<SearchImagesFilter, "limit" | "page" | "order">;
+declare type UploadImageResponse = BaseImage & {
+    sub_id?: string;
+    original_filename: string;
+    pending: number;
+    approved: number;
+};
+declare type UploadedImage = BaseImage & {
+    subId?: string;
+    originalFilename: string;
+    pending: boolean;
+    approved: boolean;
+};
+declare type GetImagesFilter = SearchImagesFilter & {
+    subId?: string;
+    originalFilename?: string;
+};
+declare type ImageVote = {
+    id: number;
+    value: number;
+};
+declare type ImageFavourite = {
+    id: number;
+};
+declare type UserImageResponse = Omit<Image, "breeds"> & {
+    breeds: Record<string, any>[];
+    breed_ids: string | null;
+    original_filename: string;
+    sub_id: string | null;
+    created_at: Date;
+    vote?: ImageVote;
+    favourite?: ImageFavourite;
+};
+declare type UserImage = Omit<Image, "breeds"> & {
+    breeds: Record<string, any>[];
+    breedId: string | null;
+    originalFilename: string;
+    subId: string | null;
+    createdAt: Date;
+    vote?: ImageVote;
+    favourite?: ImageFavourite;
+};
+declare type ImageAnalysisLabel = {
+    confidence: number;
+    instances?: {
+        boundingBox: {
+            height: number;
+            left: number;
+            top: number;
+            width: number;
+        };
+        confidence: number;
+    }[];
+    name: string;
+    parents?: {
+        name: string;
+    }[];
+};
+declare type ImageAnalysisResponse = {
+    labels: {
+        Confidence: number;
+        Instances?: {
+            BoundingBox: {
+                Height: number;
+                Left: number;
+                Top: number;
+                Width: number;
+            };
+            Confidence: number;
+        }[];
+        Name: string;
+        Parents?: {
+            Name: string;
+        }[];
+    }[];
+    moderation_labels: any[];
+    vendor: string;
+    image_id: string;
+    created_at: Date;
+};
+declare type ImageAnalysis = {
+    labels: ImageAnalysisLabel[];
+    moderationLabels: any;
+    vendor: string;
+    imageId: string;
+    createdAt: Date;
+};
+
+declare type VoteImage = {
+    url?: string;
+    id?: string;
+};
+declare type VoteResponse = {
+    id: number;
+    image_id: string;
+    sub_id: string | null;
+    value: number;
+    country_code: string;
+    created_at: Date;
+    image: VoteImage;
+};
+declare type Vote = {
+    id: number;
+    imageId: string;
+    subId: string | null;
+    value: number;
+    countryCode: string;
+    createdAt: Date;
+    image: VoteImage;
+};
+declare type GetVoteResponse = VoteResponse & {
+    user_id: string;
+};
+declare type GetVote = Vote & {
+    userId: string;
+};
+declare type AddVoteData = {
+    imageId: string;
+    subId?: string;
+    value: number;
+};
+declare type AddVoteRequestData = {
+    image_id: string;
+    sub_id?: string;
+    value: number;
+};
+declare type AddVoteResponse = {
+    id: number;
+    image_id: string;
+    sub_id?: string;
+    value: number;
+    country_code: string;
+    message: string;
+};
+declare type AddVote = Omit<Vote, "createdAt" | "image" | "subId"> & {
+    subId?: string;
+    message: string;
+};
+declare type DeleteVote = {
+    message: string;
+};
+
+export { AddFavourite, AddVote, AddVoteData, AddVoteRequestData, AddVoteResponse, DeleteFavourite, DeleteVote, Favourite, FavouriteResponse, GetImage, GetImageOptions, GetImagesFilter, GetRandomImageFilter, GetVote, GetVoteResponse, Image, ImageAnalysis, ImageAnalysisResponse, SearchImagesFilter, UploadImageResponse, UploadedImage, UserImage, UserImageResponse, Vote, VoteResponse };
