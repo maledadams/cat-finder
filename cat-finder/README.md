@@ -1,18 +1,52 @@
-# React + Vite
+# Cat Finder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Cat Finder is a React + Vite app that uses [The Cat API](https://thecatapi.com/) to:
 
-Currently, two official plugins are available:
+- Search cat images by breed name
+- Fetch a random cat image
+- Show a small spinning default cat image while loading
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Requirements
 
-## React Compiler
+- Node.js 18+ (recommended)
+- npm
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Setup
 
-Note: This will impact Vite dev & build performances.
+1. Install dependencies:
 
-## Expanding the ESLint configuration
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. Add your API key in `cat-finder/.env`:
+
+```env
+VITE_CAT_API_KEY=your_thecatapi_key_here
+```
+
+Important:
+- The env file must be inside the `cat-finder` folder.
+- If `npm run dev` is already running, restart it after editing `.env`.
+
+## Run Locally
+
+From `cat-finder/`:
+
+```bash
+npm run dev
+```
+
+Open the local URL shown by Vite (usually `http://localhost:5173`).
+
+## Usage
+
+- Type a breed name (for example: `siamese`, `bengal`, `maine coon`) and click `Search` or press `Enter`.
+- Click `Random` to get any random cat image.
+
+## Scripts
+
+- `npm run dev` starts development server
+- `npm run build` creates production build
+- `npm run preview` previews production build
+- `npm run lint` runs ESLint
